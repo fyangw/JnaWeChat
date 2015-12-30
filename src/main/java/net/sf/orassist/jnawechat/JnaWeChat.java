@@ -9,50 +9,107 @@ import com.sun.jna.win32.W32APIOptions;
 
 import static net.sf.orassist.jnawechat.MyUser32.*;
 
+import java.util.ArrayList;
+
+public class JnaWeChat {
+	
+	HWND hwnd;
+	
+	public static void main(String[] args) throws IllegalStateException {
+		new JnaWeChat().send("微信发送测试");
+	}
+
+	/**
+	 * Init, find the window of WeChat browser or plugin. 
+	 * Make sure the browser or plugin is opened and scanned with mobile phone. 
+	 * @throws IllegalStateException
+	 */
+	public JnaWeChat() throws IllegalStateException {
+		String[][] windowClassNames = 
+		//360 Browser WeChat Plugin
+		{
+			{"360se6_Frame", "微信网页版"},
+			{"SeWnd", null},
+			{"Chrome_WidgetWin_1", null},
+			{"Chrome_WidgetWin_0", null},
+			{"Chrome_RenderWidgetHostHWND", null},
+		};
+		
+//		JavaFX WebView, not work
+//		{
+//			{"GlassWndClass-GlassWindowClass-2", "StockToolkit"},
+//		}
+		
+//		Baidu Browser WeChat Plugin
+//		{
+//			{"Baidu_PopupWnd", "微信网页版"},
+//			{"BiDuWidget", null},
+//			{"Chrome_WidgetWin_0", null},
+//			{"Chrome_RenderWidgetHostHWND", null},
+//		}
+
+//		Chrome
+//		{
+//			{"Chrome_WidgetWin_1", "微信网页版 - Google Chrome"},
+//			{"Chrome_RenderWidgetHostHWND", "Chrome Legacy Window"},
+//		}
+		
+//		WeChat PC
+//		{
+//			{"WeChatMainWndForPC",""}
+//		}
+		
+		HWND[] hwndArr = findWindow(windowClassNames);
+		hwnd = hwndArr[hwndArr.length - 1];
+		if (hwndArr.length != windowClassNames.length || hwnd == null) {
+			hwnd = null;
+			throw new IllegalStateException("Cannot locate WeChat window/plugin.");
+		}
+	}
+	
+	public static HWND[] findWindow(String[][] windowClassTitleArr) {
+		ArrayList<HWND> hwndList = new ArrayList<HWND>(); 
+		HWND hwnd;
+		hwndList.add(hwnd = INSTANCE.FindWindow(windowClassTitleArr[0][0], windowClassTitleArr[0][1]));
+		for (int i = 1; hwnd != null && i < windowClassTitleArr.length; i ++) {
+			hwndList.add(hwnd = INSTANCE.FindWindowEx(hwnd, null, windowClassTitleArr[i][0], windowClassTitleArr[i][1]));
+			System.out.println("hwnd " + (hwnd == null ? hwnd : hwnd.getPointer()));
+		}
+		return hwndList.toArray(new HWND[hwndList.size()]);
+	}
+	
+	public void send(String text) {
+
+		if (hwnd != null) {
+			
+			WPARAM wPARAM;
+			LPARAM lPARAM;
+			
+			for (char c:text.toCharArray()) {
+				wPARAM = new WPARAM(c);
+				lPARAM = new LPARAM(0);
+	
+				INSTANCE.SendMessage(hwnd, WM_CHAR, wPARAM, lPARAM);
+			}
+
+			wPARAM = new WPARAM(VK_RETURN);
+			lPARAM = new LPARAM(0);
+			
+			INSTANCE.SendMessage(hwnd, WM_KEYDOWN, wPARAM, lPARAM);
+			INSTANCE.SendMessage(hwnd, WM_KEYUP, wPARAM, lPARAM);
+		}
+		
+	}
+	
+}
+
 interface MyUser32 extends User32 {
 
 	MyUser32 INSTANCE = (MyUser32) Native.loadLibrary("user32", MyUser32.class, W32APIOptions.DEFAULT_OPTIONS);
 
-	int VK_A = 0x61;
 	int VK_RETURN = 0x0D;
-	int VK_ENTER = 0x0D;
 	
 	public abstract HWND FindWindowEx(HWND hwndParent, HWND hwndhwndAfter, String lpszClass, String lpszWindow);
 	public abstract LRESULT SendMessage(HWND hWnd, int msg, WPARAM wParam, LPARAM lParam);
 	
-}
-
-public class JnaWeChat {
-	
-	public static void main(String[] args) {
-		
-		HWND hwnd = INSTANCE.FindWindow("WeChatMainWndForPC", null);
-		System.out.println("hwnd " + (hwnd == null ? hwnd : hwnd.getPointer()));
-		
-		if (hwnd != null) {
-			
-			System.out.println("hwnd " + (hwnd == null ? hwnd : hwnd.getPointer()));
-			
-//			INSTANCE.ShowWindow(hwnd, SW_RESTORE);
-			INSTANCE.SetForegroundWindow(hwnd);
-	
-			INSTANCE.SetFocus(hwnd);
-			
-			WPARAM wPARAM = new WPARAM(VK_A);
-			LPARAM lPARAM = new LPARAM(0);
-
-			//MyUser32.INSTANCE.PostMessage(hwnd, WM_KEYDOWN, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_KEYDOWN, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_CHAR, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_KEYUP, wPARAM, lPARAM);
-
-			wPARAM = new WPARAM(VK_ENTER);
-			lPARAM = new LPARAM(0);
-			
-			//MyUser32.INSTANCE.PostMessage(hwnd, WM_KEYDOWN, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_KEYDOWN, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_CHAR, wPARAM, lPARAM);
-			INSTANCE.SendMessage(hwnd, WM_KEYUP, wPARAM, lPARAM);
-		}
-	}
 }
