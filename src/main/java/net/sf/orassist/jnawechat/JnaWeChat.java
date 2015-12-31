@@ -50,36 +50,22 @@ public class JnaWeChat {
 //		{"WeChatMainWndForPC",""}
 //	}
 	
-	private HWND hwnd;
+	private final HWND hwnd;
 	
 	public static void main(String[] args) throws IllegalStateException {
 		new JnaWeChat().send("微信发送测试");
 	}
 
-	/** find window through the path of window class and title array */
-	public static HWND[] findWindow(String[][] windowClassTitleArr) {
-		ArrayList<HWND> hwndList = new ArrayList<HWND>(); 
-		HWND hwnd;
-		hwndList.add(hwnd = INSTANCE.FindWindow(windowClassTitleArr[0][0], windowClassTitleArr[0][1]));
-		for (int i = 1; hwnd != null && i < windowClassTitleArr.length; i ++) {
-			hwndList.add(hwnd = INSTANCE.FindWindowEx(hwnd, null, windowClassTitleArr[i][0], windowClassTitleArr[i][1]));
-//			System.out.println("hwnd " + (hwnd == null ? hwnd : hwnd.getPointer()));
-		}
-		return hwndList.toArray(new HWND[hwndList.size()]);
-	}
-	
 	/**
 	 * Init, find the window of WeChat browser or plugin. 
 	 * Make sure the browser or plugin is opened and scanned with mobile phone. 
-	 * @throws IllegalStateException
+	 * @throws IllegalStateException 
 	 */
 	public JnaWeChat() throws IllegalStateException {
 		
 		HWND[] hwndArr = findWindow(windowClassNames);
 		
-		if (hwndArr.length != windowClassNames.length || 
-				(hwnd = hwndArr[hwndArr.length - 1]) == null) {
-			hwnd = null;
+		if ((hwnd = hwndArr[hwndArr.length - 1]) == null) {
 			throw new IllegalStateException("Cannot locate WeChat window/plugin.");
 		}
 	}
@@ -119,4 +105,25 @@ interface MyUser32 extends User32 {
 	public abstract HWND FindWindowEx(HWND hwndParent, HWND hwndhwndAfter, String lpszClass, String lpszWindow);
 	public abstract LRESULT SendMessage(HWND hWnd, int msg, WPARAM wParam, LPARAM lParam);
 	
+	/**
+	 * find window through the path of window class and title array 
+	 * @param windowClassTitleArr The array of window class and title pair 
+	 * <pre>
+	 * new String[][] { 
+	 *   {"Top Window Class", "Top Window Title"}, 
+	 *   {"Child Window Class 1", "Child Window Title 2"} 
+	 *   ...
+	 * }
+	 * </pre>
+	 * @return array of HWND which is one by one mapped from windowClassTitleArr 
+	 */
+	public static HWND[] findWindow(String[][] windowClassTitleArr) {
+		ArrayList<HWND> hwndList = new ArrayList<HWND>(); 
+		HWND hwnd;
+		hwndList.add(hwnd = INSTANCE.FindWindow(windowClassTitleArr[0][0], windowClassTitleArr[0][1]));
+		for (int i = 1; hwnd != null && i < windowClassTitleArr.length; i ++) {
+			hwndList.add(hwnd = INSTANCE.FindWindowEx(hwnd, null, windowClassTitleArr[i][0], windowClassTitleArr[i][1]));
+		}
+		return hwndList.toArray(new HWND[windowClassTitleArr.length]);
+	}
 }
